@@ -781,6 +781,9 @@ class MainMenuPanel extends PSRoomPanel<MainMenuRoom> {
 						<a href={`//${Config.routes.root}/rules`} target="_blank">{TL`Rules`}</a> | {}
 						<a href={`//${Config.routes.root}/credits`} target="_blank">{TL`Credits`}</a> | {}
 						<a href={`//${Config.routes.root}/privacy`} target="_blank">{TL`Privacy`}</a>
+						{/* pokemon-showdown-custom: aviso de projeto de fã */}
+						{/* eslint-disable-next-line @stylistic/max-len */}
+						<br /><small>{TL`Fan project, non-profit. Pokémon and all related names and images are trademarks and property of Nintendo, Creatures, Game Freak and The Pokémon Company.`}</small>
 					</small>
 					<CCPAIntercept />
 				</div>
