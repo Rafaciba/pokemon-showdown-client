@@ -31,10 +31,12 @@
 				for (var i = 0; i < teams.length; i++) {
 					// Mesmo visual do seletor de time da tela principal (classe "team"): nome em
 					// cima, ícones dos Pokémon embaixo. A classe "option" cortaria os ícones.
+					// Ícones calculados agora, sem o cache do time (Storage.getTeamIcons): o cache
+					// pode ter sido gerado antes de os dados de Pokémon carregarem e ficar com "?".
 					buf += '<li><button name="selectTeam" value="' + i + '" class="team">' +
 						'<strong><span>' + BattleLog.escapeFormat(teams[i].format) + ' · </span>' +
 						BattleLog.escapeHTML(teams[i].name) + '</strong>' +
-						'<small>' + Storage.getTeamIcons(teams[i]) + '</small></button></li>';
+						'<small>' + Storage.packedTeamIcons(Storage.getPackedTeam(teams[i])) + '</small></button></li>';
 				}
 				buf += '</ul>';
 			}
