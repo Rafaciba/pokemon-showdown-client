@@ -11,6 +11,11 @@
  *   <button name="gymImportTeam">       escolhe um dos times salvos e o coloca,
  *                                       exportado, na <textarea name="team"> da página
  *
+ * Menu de formatos (FormatPopup): os formatos nossos (marcados pelo servidor com o
+ * bit 512 no código de exibição, ver server/rooms.ts → formatListText) aparecem
+ * primeiro, com as seções abertas. Os oficiais ficam agrupados em "Official Formats",
+ * fechado por padrão.
+ *
  * @license MIT
  */
 
@@ -71,6 +76,125 @@
 		},
 		gymImportTeam: function (value, button) {
 			app.addPopup(GymTeamImportPopup, { room: this, sourceEl: button });
+		}
+	});
+
+	// --- Menu de formatos: nossos primeiro, oficiais agrupados ---------------
+
+	var OFFICIAL_GROUP = 'Official Formats';
+	var CUSTOM_FORMAT_BIT = 512;
+	var customFormatIds = {};
+
+	var parseFormats = this.App.prototype.parseFormats;
+	this.App.prototype.parseFormats = function (formatsList) {
+		customFormatIds = {};
+		for (var i = 1; i < formatsList.length; i++) {
+			// Formatos vêm como "Nome,código"; seções e marcadores (",1", ",LL") começam com vírgula
+			var entry = formatsList[i];
+			var comma = entry.lastIndexOf(',');
+			if (comma <= 0) continue;
+			var code = parseInt(entry.substr(comma + 1), 16);
+			if (!isNaN(code) && (code & CUSTOM_FORMAT_BIT)) customFormatIds[toID(entry.substr(0, comma))] = true;
+		}
+		return parseFormats.call(this, formatsList);
+	};
+
+	var FormatPopup = this.FormatPopup;
+	var renderFormats = FormatPopup.prototype.renderFormats;
+	var updateOpen = FormatPopup.prototype.updateOpen;
+
+	function formatButton(popup, id, starred) {
+		var star = starred ?
+			'<i class="fa fa-star" style="float: right; color: #FFD700; text-shadow: 0 0 1px #000;"></i>' :
+			'<i class="fa fa-star subtle" style="float: right;"></i>';
+		return '<li><button name="selectFormat" value="' + id + '" class="option' + (popup.data.format === id ? ' cur' : '') + '">' +
+			BattleLog.escapeFormat(BattleFormats[id].id) + star + '</button></li>';
+	}
+
+	/** Seções dos formatos aceitos por `filter`, em colunas como no original (uma coluna se `oneColumn`). */
+	function renderSections(popup, filter, oneColumn, defaultOpen) {
+		var bufs = [];
+		var curBuf = 1;
+		var curSection = '';
+		var searchId = toID(popup.search);
+		for (var id in BattleFormats) {
+			var format = BattleFormats[id];
+			if (!filter(id) || !popup.shouldDisplayFormat(format)) continue;
+			if (popup.search && !format.id.includes(searchId)) continue;
+			if (popup.starred[id]) continue; // só aparece entre as favoritas
+			if (format.section && format.section !== curSection) {
+				if (curSection) bufs[curBuf] += '</details></p>';
+				curSection = format.section;
+				if (oneColumn) {
+					curBuf = 1;
+				} else if (!app.supports['formatColumns']) {
+					curBuf = (curSection === 'Doubles' || curSection === 'Past Generations') ? 2 : 1;
+				} else {
+					curBuf = format.column || 1;
+				}
+				if (!bufs[curBuf]) bufs[curBuf] = '';
+				if (defaultOpen && popup.open[curSection] === undefined) popup.open[curSection] = true;
+				var open = (popup.open[curSection] || searchId) ? ' open' : '';
+				bufs[curBuf] += '<p><details' + open + ' section="' + BattleLog.escapeHTML(curSection) + '">' +
+					'<summary><strong style="color: #579">' + BattleLog.escapeHTML(curSection) + '</strong></summary>';
+			}
+			bufs[curBuf] += formatButton(popup, id, false);
+		}
+		if (curSection) bufs[curBuf] += '</details></p>';
+		var html = '';
+		var used = bufs.filter(function (buf) { return buf; }).length;
+		for (var i = 1; i < bufs.length; i++) {
+			if (!bufs[i]) continue;
+			html += '<ul class="popupmenu"' + (used > 1 ? ' style="float:left;padding-left:5px"' : '') + '>' + bufs[i] + '</ul>';
+		}
+		return html;
+	}
+
+	$.extend(FormatPopup.prototype, {
+		renderFormats: function () {
+			var popup = this;
+			var isCustom = function (id) { return !!customFormatIds[id]; };
+			var isOfficial = function (id) { return !customFormatIds[id]; };
+			var hasCustom = Object.keys(BattleFormats).some(function (id) {
+				return isCustom(id) && popup.shouldDisplayFormat(BattleFormats[id]);
+			});
+			// Sem formatos nossos neste menu: comportamento original
+			if (!hasCustom) return renderFormats.call(this);
+
+			var top = '';
+			if (this.selectType === 'watch' && !this.search) {
+				top += '<li><button name="selectFormat" value="" class="option' + (this.data.format === '' ? ' cur' : '') +
+					'">(All formats)</button></li>';
+			}
+			for (var id in this.starred) {
+				if (!BattleFormats[id]) {
+					delete this.starred[id];
+					continue;
+				}
+				if (!this.shouldDisplayFormat(BattleFormats[id])) continue;
+				if (this.search && !id.includes(toID(this.search))) continue;
+				top += formatButton(this, id, true);
+			}
+			var custom = renderSections(this, isCustom, true, true);
+			var official = renderSections(this, isOfficial, false, false);
+			if (!top && !custom && !official) return '<ul class="popupmenu"><em>No formats found</em></ul>';
+
+			var html = (top ? '<ul class="popupmenu">' + top + '</ul>' : '') + custom;
+			if (official) {
+				var open = (this.open[OFFICIAL_GROUP] || toID(this.search)) ? ' open' : '';
+				// Mesma estrutura das seções (ul.popupmenu > p > details), para ter o mesmo estilo de título
+				html += '<div style="clear:left"></div><ul class="popupmenu"><p><details' + open + ' section="' + OFFICIAL_GROUP + '">' +
+					'<summary><strong style="color: #579">' + OFFICIAL_GROUP + '</strong></summary>' +
+					official + '<div style="clear:left"></div></details></p></ul>';
+			}
+			return html;
+		},
+		// Com o grupo "Official Formats", há <details> dentro de <details>: o clique numa seção
+		// interna também chegaria ao grupo. Só conta o clique no próprio título.
+		updateOpen: function (ev) {
+			var summary = $(ev.target).closest('summary')[0];
+			if (!summary || summary.parentNode !== ev.currentTarget) return;
+			return updateOpen.call(this, ev);
 		}
 	});
 }).call(this, jQuery);
