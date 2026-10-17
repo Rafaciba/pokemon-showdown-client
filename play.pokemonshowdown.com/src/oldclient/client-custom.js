@@ -16,6 +16,11 @@
  * primeiro, com as seções abertas. Os oficiais ficam agrupados em "Official Formats",
  * fechado por padrão.
  *
+ * Teambuilder e formatos de desafio: o servidor envia `|customformats|{id: base}`
+ * (server/rooms.ts → customFormatsText) com o formato base de cada formato nosso.
+ * O teambuilder decide geração, Pokédex e busca pelo id do formato do time; para
+ * esses times, ele passa a ver o formato base (sem mudar o formato salvo).
+ *
  * @license MIT
  */
 
@@ -196,5 +201,92 @@
 			if (!summary || summary.parentNode !== ev.currentTarget) return;
 			return updateOpen.call(this, ev);
 		}
+	});
+
+	// --- Teambuilder: formatos de desafio usam a Pokédex do formato base -----
+
+	var customBaseFormats = {};
+
+	var receive = this.App.prototype.receive;
+	this.App.prototype.receive = function (data) {
+		if (data.startsWith('|customformats|')) {
+			try {
+				customBaseFormats = JSON.parse(data.slice(15)) || {};
+			} catch (e) {
+				customBaseFormats = {};
+			}
+			return;
+		}
+		return receive.call(this, data);
+	};
+
+	/**
+	 * O teambuilder lê `curTeam.format` em dezenas de lugares para decidir geração,
+	 * Pokédex e busca. Para um time de formato de desafio, `curTeam` vira um Proxy
+	 * do time: `format` devolve o formato base, e todo o resto (inclusive gravações)
+	 * vai para o time real, que continua salvo com o formato do desafio.
+	 */
+	function teamWithBaseFormat(team) {
+		if (!team || team.__realTeam || !window.Proxy) return team;
+		return new window.Proxy(team, {
+			get: function (target, prop) {
+				if (prop === '__realTeam') return target;
+				if (prop === 'format') return customBaseFormats[target.format] || target.format;
+				return target[prop];
+			}
+		});
+	}
+
+	var TeambuilderRoom = this.TeambuilderRoom.prototype;
+	var edit = TeambuilderRoom.edit;
+	var changeFormat = TeambuilderRoom.changeFormat;
+	var updateTeamView = TeambuilderRoom.updateTeamView;
+
+	/** Troca curTeam pelo Proxy se o time for de um formato de desafio; devolve true se trocou. */
+	function useBaseFormat(room) {
+		var team = room.curTeam;
+		if (!team || team.__realTeam || !customBaseFormats[team.format]) return false;
+		room.curTeam = teamWithBaseFormat(team);
+		// Geração e Pokédex de novo, agora pelo formato base (o formato salvo não muda)
+		changeFormat.call(room, team.format);
+		return true;
+	}
+
+	/** Roda `fn` com o time real em curTeam: validação e exportação usam o formato do desafio. */
+	function withRealTeam(fn) {
+		return function () {
+			var proxied = this.curTeam;
+			var target = proxied && proxied.__realTeam;
+			if (!target) return fn.apply(this, arguments);
+			this.curTeam = target;
+			try {
+				return fn.apply(this, arguments);
+			} finally {
+				if (this.curTeam === target) this.curTeam = proxied;
+			}
+		};
+	}
+
+	$.extend(TeambuilderRoom, {
+		edit: function () {
+			var result = edit.apply(this, arguments);
+			if (useBaseFormat(this)) this.update();
+			return result;
+		},
+		changeFormat: function (format) {
+			var result = changeFormat.apply(this, arguments);
+			useBaseFormat(this);
+			return result;
+		},
+		updateTeamView: function () {
+			var result = updateTeamView.apply(this, arguments);
+			// O botão de formato mostra (e abre o menu com) o formato real do time
+			var target = this.curTeam && this.curTeam.__realTeam;
+			if (target) this.$('button.teambuilderformatselect').val(target.format).html(BattleLog.escapeFormat(target.format));
+			return result;
+		},
+		validate: withRealTeam(TeambuilderRoom.validate),
+		psExport: withRealTeam(TeambuilderRoom.psExport),
+		pokepasteExport: withRealTeam(TeambuilderRoom.pokepasteExport)
 	});
 }).call(this, jQuery);
