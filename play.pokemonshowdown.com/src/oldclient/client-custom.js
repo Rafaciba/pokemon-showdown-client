@@ -19,6 +19,9 @@
  * Tela principal: botão "Gym Challenge" (abaixo de "Tournaments"), que abre a
  * lista de desafios do servidor (/ginasio).
  *
+ * Popup de usuário: botão "Gym profile" (só para quem está logado), que abre o
+ * perfil do jogador no Desafio de Ginásios.
+ *
  * Teambuilder e formatos de desafio: o servidor envia `|customformats|{id: base}`
  * (server/rooms.ts → customFormatsText) com o formato base de cada formato nosso.
  * O teambuilder decide geração, Pokédex e busca pelo id do formato do time; para
@@ -307,4 +310,24 @@
 		if (app.socket && !app.isDisconnected) button.find('button').removeClass('disabled');
 		return result;
 	};
+
+	// --- Popup de usuário: botão "Gym profile" ------------------------------
+
+	var UserPopup = this.UserPopup.prototype;
+	var userPopupUpdate = UserPopup.update;
+	$.extend(UserPopup, {
+		update: function () {
+			var result = userPopupUpdate.apply(this, arguments);
+			// Perfis só para usuários logados (o servidor também confere)
+			if (app.user.get('named') && this.data.userid) {
+				this.$el.append('<p class="buttonbar"><button name="gymProfile" class="button">Gym profile</button></p>');
+			}
+			return result;
+		},
+		gymProfile: function () {
+			var userid = this.data.userid;
+			this.close();
+			app.joinRoom('view-ginasios-perfil-' + userid);
+		}
+	});
 }).call(this, jQuery);
