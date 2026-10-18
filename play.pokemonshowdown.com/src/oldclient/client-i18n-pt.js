@@ -172,6 +172,7 @@ window.PSCustomI18nPT = {
 		"Background:": "Plano de fundo:",
 		"Backup all teams from this folder": "Fazer backup de todos os times desta pasta",
 		"Backup/Restore all teams": "Backup/restaurar todos os times",
+		"Badge data:": "Dados das insígnias:",
 		"Balloon popped": "Balão estourou",
 		"Ban user": "Banir usuário",
 		"Bans Pokémon from holding Z-Crystals": "Proíbe Pokémon de segurar Z-Crystals",
@@ -1188,6 +1189,10 @@ window.PSCustomI18nPT = {
 			"pt": "O usuário '{0}' foi ignorado. (Mensagens de moderadores não serão ignoradas.)"
 		},
 		{
+			"en": "{0} earned the {1}! This journey was closed by an administrator.",
+			"pt": "{0} conquistou a {1}! Esta jornada foi encerrada por um administrador."
+		},
+		{
 			"en": "User {0} ignored. (Moderator messages will not be ignored.)",
 			"pt": "Usuário {0} ignorado. (Mensagens de moderadores não são ignoradas.)"
 		},
@@ -1762,6 +1767,10 @@ window.PSCustomI18nPT = {
 		{
 			"en": "– Elite Four {0}/4: {1}",
 			"pt": "– Elite 4 {0}/4: {1}"
+		},
+		{
+			"en": "{0} earned the {1}! ({2}/{3})",
+			"pt": "{0} conquistou a {1}! ({2}/{3})"
 		},
 		{
 			"en": "Physical Scarf: {0}",
