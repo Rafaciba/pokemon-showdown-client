@@ -863,6 +863,7 @@ window.PSCustomI18nPT = {
 		"Thawed": "Descongelou",
 		"The Elite Four starts over from the first member.": "A Elite 4 recomeça do primeiro membro.",
 		"The Wii U does not support secure connections.": "O Wii U não suporta conexões seguras.",
+		"The battle was resumed from where it stopped.": "A batalha foi retomada do ponto em que parou.",
 		"The challenge was cancelled.": "O desafio foi cancelado.",
 		"The combination of Gravity and sleep-inducing moves with imperfect accuracy are banned": "É proibido combinar Gravity com golpes de sono de precisão imperfeita",
 		"The combination of sleep-inducing moves with imperfect accuracy and Gravity or Gigantamax Orbeetle are banned": "É proibido combinar golpes de sono com precisão imperfeita com Gravity ou Orbeetle Gigantamax",
