@@ -16,6 +16,9 @@
  * primeiro, com as seções abertas. Os oficiais ficam agrupados em "Official Formats",
  * fechado por padrão.
  *
+ * Tela principal: botão "Gym Challenge" (abaixo de "Tournaments"), que abre a
+ * lista de desafios do servidor (/ginasio).
+ *
  * Teambuilder e formatos de desafio: o servidor envia `|customformats|{id: base}`
  * (server/rooms.ts → customFormatsText) com o formato base de cada formato nosso.
  * O teambuilder decide geração, Pokédex e busca pelo id do formato do time; para
@@ -289,4 +292,19 @@
 		psExport: withRealTeam(TeambuilderRoom.psExport),
 		pokepasteExport: withRealTeam(TeambuilderRoom.pokepasteExport)
 	});
+
+	// --- Tela principal: botão "Gym Challenge" ------------------------------
+
+	var MainMenuRoom = this.MainMenuRoom.prototype;
+	var mainMenuInitialize = MainMenuRoom.initialize;
+	MainMenuRoom.initialize = function () {
+		var result = mainMenuInitialize.apply(this, arguments);
+		// Mesmo estilo dos botões oficiais; "onlineonly" fica desabilitado sem conexão
+		var button = $('<p><button class="button mainmenu1 onlineonly disabled" name="send" value="/ginasio">' +
+			'Gym Challenge</button></p>');
+		var tournaments = this.$('.mainmenu button[value="/smogtours"]').closest('p');
+		if (tournaments.length) button.insertAfter(tournaments);
+		if (app.socket && !app.isDisconnected) button.find('button').removeClass('disabled');
+		return result;
+	};
 }).call(this, jQuery);
