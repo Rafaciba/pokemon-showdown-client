@@ -24,6 +24,9 @@
  *
  * Privacidade: o teambuilder não consulta a API da Smogon (links de análises).
  *
+ * Nome do site: "Liga de Desafios" no título da aba (no lugar de "Showdown!"). O logo
+ * do topo continua o do Pokémon Showdown (decisão de 2026-10-18).
+ *
  * Teambuilder e formatos de desafio: o servidor envia `|customformats|{id: base}`
  * (server/rooms.ts → customFormatsText) com o formato base de cada formato nosso.
  * O teambuilder decide geração, Pokédex e busca pelo id do formato do time; para
@@ -34,6 +37,8 @@
 
 (function ($) {
 	'use strict';
+
+	var SITE_NAME = 'Liga de Desafios';
 
 	var GymTeamImportPopup = this.Popup.extend({
 		type: 'semimodal',
@@ -338,4 +343,9 @@
 			app.joinRoom('view-ginasios-perfil-' + userid);
 		}
 	});
+
+	// --- Nome do site na aba do navegador -------------------------------------
+	this.App.prototype.updateTitle = function (room) {
+		document.title = room.title ? room.title + ' - ' + SITE_NAME : SITE_NAME;
+	};
 }).call(this, jQuery);
