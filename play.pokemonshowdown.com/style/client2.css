@@ -1183,14 +1183,14 @@ form.menugroup {
 	position: absolute;
 	left: -30px;
 	bottom: -5px;
-	background: url(https://play.pokemonshowdown.com/sprites/gen5/meloetta.png) center no-repeat;
+	background: url(/sprites/gen5/meloetta.png) center no-repeat;
 }
 .roomcounters .button:hover .usercount {
-	background: url(https://play.pokemonshowdown.com/sprites/gen5ani/meloetta.gif) center no-repeat;
+	background: url(/sprites/gen5ani/meloetta.gif) center no-repeat;
 }
 .roomcounters .usercount.afd,
 .roomcounters .button:hover .usercount.afd {
-	background: url(https://play.pokemonshowdown.com/sprites/afd/meloetta.png) center no-repeat;
+	background: url(/sprites/afd/meloetta.png) center no-repeat;
 }
 .roomcounters .battlecount {
 	display: block;
@@ -1199,14 +1199,14 @@ form.menugroup {
 	position: absolute;
 	right: -30px;
 	bottom: -10px;
-	background: url(https://play.pokemonshowdown.com/sprites/gen5/meloetta-pirouette.png) center no-repeat;
+	background: url(/sprites/gen5/meloetta-pirouette.png) center no-repeat;
 }
 .roomcounters .button:hover .battlecount {
-	background: url(https://play.pokemonshowdown.com/sprites/gen5ani/meloetta-pirouette.gif) center no-repeat;
+	background: url(/sprites/gen5ani/meloetta-pirouette.gif) center no-repeat;
 }
 .roomcounters .battlecount.afd,
 .roomcounters .button:hover .battlecount.afd {
-	background: url(https://play.pokemonshowdown.com/sprites/afd/meloetta-pirouette.png) center no-repeat;
+	background: url(/sprites/afd/meloetta-pirouette.png) center no-repeat;
 }
 
 .roomlist {
@@ -2452,7 +2452,7 @@ pre.textbox.textbox-empty[placeholder]:before {
 .avatarlist button, .dark .avatarlist button {
 	width: 80px;
 	height: 80px;
-	background: transparent url(https://play.pokemonshowdown.com/sprites/trainers-sheet.png) no-repeat scroll 0px 0px;
+	background: transparent url(/sprites/trainers-sheet.png) no-repeat scroll 0px 0px;
 }
 .bglist button span {
 	display: block;

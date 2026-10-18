@@ -22,6 +22,8 @@
  * Popup de usuário: botão "Gym profile" (só para quem está logado), que abre o
  * perfil do jogador no Desafio de Ginásios.
  *
+ * Privacidade: o teambuilder não consulta a API da Smogon (links de análises).
+ *
  * Teambuilder e formatos de desafio: o servidor envia `|customformats|{id: base}`
  * (server/rooms.ts → customFormatsText) com o formato base de cada formato nosso.
  * O teambuilder decide geração, Pokédex e busca pelo id do formato do time; para
@@ -290,6 +292,12 @@
 			var target = this.curTeam && this.curTeam.__realTeam;
 			if (target) this.$('button.teambuilderformatselect').val(target.format).html(BattleLog.escapeFormat(target.format));
 			return result;
+		},
+		// Privacidade (LGPD, decisão do usuário em 2026-10-18): o teambuilder não consulta a
+		// API da Smogon (o navegador mandaria IP e formato a um terceiro). Sem dados, ele
+		// só não mostra os links de análises dos formatos oficiais.
+		tryLoadFormatResource: function (format) {
+			this.formatResources[format] = true;
 		},
 		validate: withRealTeam(TeambuilderRoom.validate),
 		psExport: withRealTeam(TeambuilderRoom.psExport),
