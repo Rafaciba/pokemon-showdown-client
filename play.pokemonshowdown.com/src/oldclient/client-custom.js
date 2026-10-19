@@ -29,6 +29,11 @@
  *
  * Privacidade: o teambuilder não consulta a API da Smogon (links de análises).
  *
+ * Divisão da tela (decisão de 2026-10-19): com uma aba de chat aberta à direita
+ * (Lobby, Staff...), as abas da esquerda (páginas do servidor, teambuilder, ladder e
+ * batalhas) ocupam o resto da tela, e o chat fica com CHAT_PANEL_WIDTH. A tela
+ * inicial (Home) continua como no PS.
+ *
  * Nome do site: "Liga de Desafios" no título da aba (no lugar de "Showdown!"). O logo
  * do topo continua o do Pokémon Showdown (decisão de 2026-10-18).
  *
@@ -379,6 +384,28 @@
 			app.joinRoom('view-ginasios-perfil-' + userid);
 		}
 	});
+
+	// --- Divisão da tela: página grande à esquerda, chat estreito à direita ------
+	var CHAT_PANEL_WIDTH = 400;
+	var WIDE_LEFT_TYPES = { html: 1, teambuilder: 1, ladder: 1, battle: 1 };
+	var originalUpdateLayout = this.App.prototype.updateLayout;
+	this.App.prototype.updateLayout = function () {
+		originalUpdateLayout.apply(this, arguments);
+		var left = this.curRoom;
+		var right = this.curSideRoom;
+		// Só quando o PS já mostrou os dois painéis lado a lado
+		if (!left || !right || left === right || !WIDE_LEFT_TYPES[left.type]) return;
+		var available = $(window).width();
+		var leftMin = left.minMainWidth || left.minWidth || left.bestWidth || 0;
+		var rightMin = right.minWidth || right.bestWidth || 320;
+		var leftWidth = Math.max(available - CHAT_PANEL_WIDTH, leftMin);
+		if (available - leftWidth < rightMin) leftWidth = available - rightMin;
+		if (leftWidth < leftMin) return; // não cabe: fica a divisão original
+		left.show('left', leftWidth);
+		right.show('right', leftWidth);
+		// As abas da direita são posicionadas pela largura do painel esquerdo
+		this.topbar.updateTabbar();
+	};
 
 	// --- Nome do site na aba do navegador -------------------------------------
 	this.App.prototype.updateTitle = function (room) {
