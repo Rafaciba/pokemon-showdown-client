@@ -10,6 +10,8 @@
  *   <button name="gymOpenTeambuilder">  abre o teambuilder (ao lado, em telas largas)
  *   <button name="gymImportTeam">       escolhe um dos times salvos e o coloca,
  *                                       exportado, na <textarea name="team"> da página
+ *   <button name="gymGo" value="view-ginasios...">  vai para a página (aba já aberta
+ *                                       ganha foco e é atualizada; senão, abre)
  *
  * Menu de formatos (FormatPopup): os formatos nossos (marcados pelo servidor com o
  * bit 512 no código de exibição, ver server/rooms.ts → formatListText) aparecem
@@ -94,6 +96,14 @@
 		},
 		gymImportTeam: function (value, button) {
 			app.addPopup(GymTeamImportPopup, { room: this, sourceEl: button });
+		},
+		gymGo: function (id) {
+			// Só as páginas do Desafio de Ginásios (o valor vem do HTML do servidor)
+			if (!/^view-ginasios(admin)?(-[a-z0-9-]+)?$/.test(id || '')) return;
+			// "/join" numa aba já aberta só a atualiza; joinRoom a põe em foco (ou abre)
+			var wasOpen = !!app.rooms[id];
+			app.joinRoom(id);
+			if (wasOpen) app.send('/join ' + id);
 		}
 	});
 
