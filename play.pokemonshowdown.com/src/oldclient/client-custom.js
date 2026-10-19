@@ -12,6 +12,9 @@
  *                                       exportado, na <textarea name="team"> da página
  *   <button name="gymGo" value="view-ginasios...">  vai para a página (aba já aberta
  *                                       ganha foco e é atualizada; senão, abre)
+ *   <button name="gymPickSprite" value="sprite">  galeria do treinador novo: põe o
+ *                                       sprite no formulário de criação (campo oculto e
+ *                                       prévia, sem recarregá-lo), fecha a galeria e volta
  *
  * Menu de formatos (FormatPopup): os formatos nossos (marcados pelo servidor com o
  * bit 512 no código de exibição, ver server/rooms.ts → formatListText) aparecem
@@ -96,6 +99,29 @@
 		},
 		gymImportTeam: function (value, button) {
 			app.addPopup(GymTeamImportPopup, { room: this, sourceEl: button });
+		},
+		gymPickSprite: function (sprite) {
+			sprite = sprite || '';
+			if (!/^[a-z0-9-]*$/.test(sprite)) return;
+			var formRoom = app.rooms['view-ginasiosadmin-treinador-novo'];
+			if (formRoom) {
+				formRoom.$el.find('input[name=avatar]').val(sprite);
+				var $preview = formRoom.$el.find('.gym-sprite-preview').empty();
+				if (sprite) {
+					$('<img />').attr({
+						src: '/sprites/trainers/' + sprite + '.png', width: 80, height: 80, alt: sprite, title: sprite
+					}).css('vertical-align', 'middle').appendTo($preview);
+				} else {
+					$('<em></em>').text($preview.attr('data-empty') || '').appendTo($preview);
+				}
+			}
+			// Fecha as abas da galeria do treinador novo (qualquer página ou busca) e volta
+			var galleries = [];
+			for (var id in app.rooms) {
+				if (id.indexOf('view-ginasiosadmin-sprites-novo-') === 0) galleries.push(id);
+			}
+			for (var i = 0; i < galleries.length; i++) app.leaveRoom(galleries[i]);
+			if (formRoom) app.focusRoom(formRoom.id);
 		},
 		gymGo: function (id) {
 			// Só as páginas do Desafio de Ginásios (o valor vem do HTML do servidor)
