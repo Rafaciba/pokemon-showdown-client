@@ -807,6 +807,7 @@ window.PSCustomI18nPT = {
 		"Something is interfering with our connection to the login server. Most likely, your internet provider needs you to re-log-in, or your internet provider is blocking Pokémon Showdown.": "Algo está interferindo na nossa conexão com o servidor de login. Provavelmente seu provedor de internet exige que você faça login de novo nele, ou está bloqueando o Pokémon Showdown.",
 		"Sort:": "Ordenar:",
 		"Sound": "Som",
+		"Source code": "Código-fonte",
 		"Speaking of, you should try": "Falando nisso, você deveria tentar",
 		"Special": "Especial",
 		"Spectators ignored.": "Espectadores ignorados.",
