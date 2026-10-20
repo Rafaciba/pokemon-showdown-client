@@ -15,6 +15,15 @@
  *   <button name="gymPickSprite" value="sprite">  galeria do treinador novo: põe o
  *                                       sprite no formulário de criação (campo oculto e
  *                                       prévia, sem recarregá-lo), fecha a galeria e volta
+ *   <button name="gymSort" value="name|type|level|checked">  ordena a tabela do sorteio
+ *                                       de treinadores (table.gym-pool); clicar de novo inverte
+ *
+ * Treinadores de um desafio (pedido do usuário em 2026-10-20): a tabela do sorteio tem
+ * busca por nome ou Pokémon do time (.gym-filter-text), filtro por tipo
+ * (.gym-filter-type) e pela seleção (.gym-filter-checked); cada lista de treinadores
+ * tem uma busca por nome (.gym-select-filter, logo antes do <select>). Tudo roda aqui,
+ * sem recarregar a página: as linhas escondidas continuam no formulário, e nada do que
+ * ainda não foi salvo se perde.
  *
  * Menu de formatos (FormatPopup): os formatos nossos (marcados pelo servidor com o
  * bit 512 no código de exibição, ver server/rooms.ts → formatListText) aparecem
@@ -128,6 +137,10 @@
 			for (var i = 0; i < galleries.length; i++) app.leaveRoom(galleries[i]);
 			if (formRoom) app.focusRoom(formRoom.id);
 		},
+		gymSort: function (key, button) {
+			var $table = $(button).closest('table.gym-pool');
+			if ($table.length && /^(name|type|level|checked)$/.test(key || '')) sortPool($table, key, button);
+		},
 		gymGo: function (id) {
 			// Só as páginas do Desafio de Ginásios (o valor vem do HTML do servidor)
 			if (!/^view-ginasios(admin)?(-[a-z0-9-]+)?$/.test(id || '')) return;
@@ -136,6 +149,102 @@
 			app.joinRoom(id);
 			if (wasOpen) app.send('/join ' + id);
 		}
+	});
+
+	// --- Treinadores de um desafio: busca, filtros e ordenação -----------------
+
+	/** Texto para comparar: sem acentos e em minúsculas. */
+	function normalizeText(text) {
+		return String(text || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+	}
+
+	/** Ordem das dificuldades ("" = a base do desafio). */
+	var LEVEL_ORDER = ['', 'random', 'easy', 'medium', 'hard', 'master'];
+
+	/** Linhas de treinadores da tabela do sorteio (sem a linha de títulos). */
+	function poolRows($table) {
+		return $table.find('tr').filter(function () { return !$(this).children('th').length; });
+	}
+
+	function poolRowName($row) {
+		return normalizeText($row.find('.gym-pool-name').text());
+	}
+
+	function applyPoolFilters($form) {
+		var $table = $form.find('table.gym-pool');
+		if (!$table.length) return;
+		var text = normalizeText($form.find('.gym-filter-text').val()).trim();
+		var type = $form.find('.gym-filter-type').val() || '';
+		var checked = $form.find('.gym-filter-checked').val() || '';
+		poolRows($table).each(function () {
+			var $row = $(this);
+			// O nome do treinador e os Pokémon do time (o título de cada ícone)
+			var names = [$row.find('.gym-pool-name').text()].concat($row.find('.picon').map(function () {
+				return this.title || '';
+			}).get());
+			var matchesText = !text || names.some(function (name) { return normalizeText(name).indexOf(text) >= 0; });
+			var matchesType = !type || $row.find('.gym-pool-type').attr('title') === type;
+			var isChecked = $row.find('input[type=checkbox]').prop('checked');
+			var matchesChecked = !checked || (checked === 'checked') === isChecked;
+			$row.toggle(matchesText && matchesType && matchesChecked);
+		});
+	}
+
+	function sortPool($table, key, button) {
+		var state = $table.data('gymSort') || {};
+		var dir = state.key === key ? -state.dir : 1;
+		$table.data('gymSort', { key: key, dir: dir });
+		var sortValue = function ($row) {
+			if (key === 'type') return normalizeText($row.find('.gym-pool-type').attr('title'));
+			if (key === 'level') return LEVEL_ORDER.indexOf($row.find('.gym-pool-level select').val() || '');
+			if (key === 'checked') return $row.find('input[type=checkbox]').prop('checked') ? 0 : 1;
+			return poolRowName($row);
+		};
+		var rows = poolRows($table).get().map(function (row) {
+			var $row = $(row);
+			return { row: row, value: sortValue($row), name: poolRowName($row) };
+		});
+		rows.sort(function (a, b) {
+			if (a.value !== b.value) return (a.value < b.value ? -1 : 1) * dir;
+			// Empate: ordem alfabética do nome
+			return a.name < b.name ? -1 : a.name > b.name ? 1 : 0;
+		});
+		// Move as próprias linhas (com os campos e o que já foi marcado)
+		var $parent = $(rows[0] && rows[0].row).parent();
+		for (var i = 0; i < rows.length; i++) $parent.append(rows[i].row);
+		$table.find('.gym-sort-arrow').remove();
+		$('<span class="gym-sort-arrow"></span>').text(dir > 0 ? ' \u25B2' : ' \u25BC').appendTo(button);
+	}
+
+	/** Busca por nome numa lista de treinadores: mostra só as opções que combinam (mais "nenhum" e a escolhida). */
+	function filterSelect(input) {
+		var $select = $(input).nextAll('select').first();
+		if (!$select.length) return;
+		var all = $select.data('gymOptions');
+		if (!all) {
+			all = $select.find('option').map(function () { return { value: this.value, label: $(this).text() }; }).get();
+			$select.data('gymOptions', all);
+		}
+		var text = normalizeText(input.value).trim();
+		var current = $select.val();
+		$select.empty();
+		for (var i = 0; i < all.length; i++) {
+			var option = all[i];
+			if (text && option.value !== '' && option.value !== current && normalizeText(option.label).indexOf(text) < 0) continue;
+			$('<option></option>').val(option.value).text(option.label).appendTo($select);
+		}
+		$select.val(current);
+	}
+
+	$(document).on('input change', '.gym-filter-text, .gym-filter-type, .gym-filter-checked', function () {
+		applyPoolFilters($(this).closest('form'));
+	});
+	$(document).on('input', '.gym-select-filter', function () {
+		filterSelect(this);
+	});
+	// Enter num campo de busca não envia (e não salva) o formulário
+	$(document).on('keydown', '.gym-filter-text, .gym-select-filter', function (e) {
+		if (e.keyCode === 13) e.preventDefault();
 	});
 
 	// --- Menu de formatos: nossos primeiro, oficiais agrupados ---------------
