@@ -30,8 +30,9 @@
  * primeiro, com as seções abertas. Os oficiais ficam agrupados em "Official Formats",
  * fechado por padrão.
  *
- * Tela principal: botão "Gym Challenge" (abaixo de "Tournaments"), que abre a
- * lista de desafios do servidor (/ginasio).
+ * Tela principal: botões "Gym Challenge" (abaixo de "Tournaments"), que abre a
+ * lista de desafios do servidor (/ginasio), e "Expedition", o modo roguelike
+ * (/expedicao).
  *
  * Popup de usuário: botão "Gym profile" (só para quem está logado), que abre o
  * perfil do jogador no Desafio de Ginásios.
@@ -142,8 +143,8 @@
 			if ($table.length && /^(name|type|level|checked)$/.test(key || '')) sortPool($table, key, button);
 		},
 		gymGo: function (id) {
-			// Só as páginas do Desafio de Ginásios (o valor vem do HTML do servidor)
-			if (!/^view-ginasios(admin)?(-[a-z0-9-]+)?$/.test(id || '')) return;
+			// Só as páginas do Desafio de Ginásios e da Expedição (o valor vem do HTML do servidor)
+			if (!/^view-(ginasios(admin)?|expedicao)(-[a-z0-9-]+)?$/.test(id || '')) return;
 			// "/join" numa aba já aberta só a atualiza; joinRoom a põe em foco (ou abre)
 			var wasOpen = !!app.rooms[id];
 			app.joinRoom(id);
@@ -467,7 +468,9 @@
 		var result = mainMenuInitialize.apply(this, arguments);
 		// Mesmo estilo dos botões oficiais; "onlineonly" fica desabilitado sem conexão
 		var button = $('<p><button class="button mainmenu1 onlineonly disabled" name="send" value="/ginasio">' +
-			'Gym Challenge</button></p>');
+			'Gym Challenge</button></p>' +
+			'<p><button class="button mainmenu1 onlineonly disabled" name="send" value="/expedicao">' +
+			'Expedition</button></p>');
 		var tournaments = this.$('.mainmenu button[value="/smogtours"]').closest('p');
 		if (tournaments.length) button.insertAfter(tournaments);
 		if (app.socket && !app.isDisconnected) button.find('button').removeClass('disabled');

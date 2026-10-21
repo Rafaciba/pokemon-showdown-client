@@ -414,6 +414,7 @@ window.PSCustomI18nPT = {
 		"Guessed spread:": "Distribuição sugerida:",
 		"Guessed spread: (Please choose 4 moves to get a guessed spread) (": "Distribuição sugerida: (escolha 4 golpes para receber uma sugestão) (",
 		"Gym Challenge": "Desafio de Ginásios",
+		"Expedition": "Expedição",
 		"Gym profile": "Perfil de ginásio",
 		"HP Type": "Tipo do HP",
 		"HP is shown in percentages": "O HP aparece em porcentagem",
