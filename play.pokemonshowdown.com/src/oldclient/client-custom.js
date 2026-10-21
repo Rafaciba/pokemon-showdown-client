@@ -12,6 +12,9 @@
  *                                       exportado, na <textarea name="team"> da página
  *   <button name="gymGo" value="view-ginasios...">  vai para a página (aba já aberta
  *                                       ganha foco e é atualizada; senão, abre)
+ *   <button name="expeditionReturn" value="view-expedicao-run-...">  na sala da batalha
+ *                                       da Expedição: fecha a sala e volta à página da
+ *                                       run (uma aba só, pedido do usuário)
  *   <button name="gymPickSprite" value="sprite">  galeria do treinador novo: põe o
  *                                       sprite no formulário de criação (campo oculto e
  *                                       prévia, sem recarregá-lo), fecha a galeria e volta
@@ -39,6 +42,11 @@
  *
  * Privacidade: o teambuilder não consulta a API da Smogon (links de análises).
  *
+ * Tooltips das páginas da Expedição (pedido do usuário, 2026-10-21): o servidor manda
+ * o conteúdo escondido dentro do elemento (span.exp-tip > span.exp-tip-body; ver
+ * server/chat-plugins/expedition/tooltips.ts), e a regra de CSS abaixo o mostra no
+ * hover. Sem script, porque o filtro de HTML das páginas não deixa passar.
+ *
  * Divisão da tela (decisão de 2026-10-19): com uma aba de chat aberta à direita
  * (Lobby, Staff...), as abas da esquerda (páginas do servidor, teambuilder, ladder e
  * batalhas) ocupam o resto da tela, e o chat fica com CHAT_PANEL_WIDTH. A tela
@@ -59,6 +67,18 @@
 	'use strict';
 
 	var SITE_NAME = 'Liga de Desafios';
+
+	// Tooltips das páginas da Expedição: só CSS (o conteúdo já vem na página)
+	$('<style id="expedition-tooltips"></style>').text(
+		'.exp-tip{position:relative;display:inline-block;cursor:help}' +
+		'.exp-tip-body{display:none;position:absolute;z-index:50;left:0;top:100%;width:320px;padding:8px 10px;' +
+		'background:#fff;color:#222;border:1px solid #999;border-radius:6px;box-shadow:0 3px 10px rgba(0,0,0,.35);' +
+		'font-size:12px;font-weight:normal;line-height:1.45;text-align:left;white-space:normal}' +
+		'.exp-tip:hover>.exp-tip-body{display:block}' +
+		// As tabelas .ladder do PS pintam todo span de cinza; dentro do tooltip, a cor normal
+		'.ladder .exp-tip,.ladder .exp-tip span{color:inherit}' +
+		'html.dark .exp-tip-body{background:#2b2b2b;color:#ddd;border-color:#666}'
+	).appendTo('head');
 
 	var GymTeamImportPopup = this.Popup.extend({
 		type: 'semimodal',
@@ -97,6 +117,28 @@
 		openTeambuilder: function () {
 			this.close();
 			app.joinRoom('teambuilder');
+		}
+	});
+
+	/** Vai para uma página do Desafio ou da Expedição: foca e atualiza a aba aberta, ou abre. */
+	function goToPage(id) {
+		if (!/^view-(ginasios(admin)?|expedicao)(-[a-z0-9-]+)?$/.test(id || '')) return false;
+		// "/join" numa aba já aberta só a atualiza; joinRoom a põe em foco (ou abre)
+		var wasOpen = !!app.rooms[id];
+		app.joinRoom(id);
+		if (wasOpen) app.send('/join ' + id);
+		return true;
+	}
+
+	// Na sala da batalha. Fica em Room (de onde a sala da batalha herda): este arquivo
+	// carrega antes do client-battle.js, e BattleRoom ainda não existe aqui
+	$.extend(this.Room.prototype, {
+		expeditionReturn: function (id) {
+			// Só a página de uma run da Expedição (o valor vem do HTML do servidor), só da batalha
+			if (!/^view-expedicao-run-[a-z0-9]+$/.test(id || '') || this.id.indexOf('battle-') !== 0) return;
+			var battleId = this.id;
+			goToPage(id);
+			app.leaveRoom(battleId);
 		}
 	});
 
@@ -144,11 +186,7 @@
 		},
 		gymGo: function (id) {
 			// Só as páginas do Desafio de Ginásios e da Expedição (o valor vem do HTML do servidor)
-			if (!/^view-(ginasios(admin)?|expedicao)(-[a-z0-9-]+)?$/.test(id || '')) return;
-			// "/join" numa aba já aberta só a atualiza; joinRoom a põe em foco (ou abre)
-			var wasOpen = !!app.rooms[id];
-			app.joinRoom(id);
-			if (wasOpen) app.send('/join ' + id);
+			goToPage(id);
 		}
 	});
 
