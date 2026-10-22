@@ -37,7 +37,7 @@
  * lista de desafios do servidor (/ginasio), e "Expedition", o modo roguelike
  * (/expedicao).
  *
- * Popup de usuário: botão "Gym profile" (só para quem está logado), que abre o
+ * Popup de usuário: botão "Player profile" (só para quem está logado), que abre o
  * perfil do jogador no Desafio de Ginásios.
  *
  * Privacidade: o teambuilder não consulta a API da Smogon (links de análises).
@@ -551,7 +551,7 @@
 		return result;
 	};
 
-	// --- Popup de usuário: botão "Gym profile" ------------------------------
+	// --- Popup de usuário: botão "Player profile" (Desafio e Expedição) -------
 
 	var UserPopup = this.UserPopup.prototype;
 	var userPopupUpdate = UserPopup.update;
@@ -560,7 +560,7 @@
 			var result = userPopupUpdate.apply(this, arguments);
 			// Perfis só para usuários logados (o servidor também confere)
 			if (app.user.get('named') && this.data.userid) {
-				this.$el.append('<p class="buttonbar"><button name="gymProfile" class="button">Gym profile</button></p>');
+				this.$el.append('<p class="buttonbar"><button name="gymProfile" class="button">Player profile</button></p>');
 			}
 			return result;
 		},

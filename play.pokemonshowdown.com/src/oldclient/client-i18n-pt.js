@@ -419,7 +419,7 @@ window.PSCustomI18nPT = {
 		"Defeat. The expedition is over.": "Derrota. A expedição acabou.",
 		"Expedition complete. Congratulations!": "Expedição concluída. Parabéns!",
 		"Back to the expedition": "Voltar para a expedição",
-		"Gym profile": "Perfil de ginásio",
+		"Player profile": "Perfil do jogador",
 		"HP Type": "Tipo do HP",
 		"HP is shown in percentages": "O HP aparece em porcentagem",
 		"Happiness": "Felicidade",
