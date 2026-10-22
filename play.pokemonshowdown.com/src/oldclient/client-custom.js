@@ -45,10 +45,23 @@
  * Senha: as janelas do cliente com campo de senha ganham o botão de ver a senha (a de
  * login do PS já tem o dela).
  *
+ * Seletor de Pokémon do editor de expedições (pedido do usuário, 2026-10-22): no lugar dos
+ * campos de texto separados por vírgula, uma busca pela Pokédex do cliente
+ * (div.exp-species-picker). Os escolhidos ficam como etiquetas removíveis e vão no campo
+ * oculto do formulário, separados por vírgula (o servidor confere tudo de novo). A classe
+ * exp-species-max-N limita a N Pokémon (os times fixos).
+ *
  * Tooltips das páginas da Expedição (pedido do usuário, 2026-10-21): o servidor manda
  * o conteúdo escondido dentro do elemento (span.exp-tip > span.exp-tip-body; ver
  * server/chat-plugins/expedition/tooltips.ts), e a regra de CSS abaixo o mostra no
- * hover. Sem script, porque o filtro de HTML das páginas não deixa passar.
+ * hover. O tooltip não recebe o mouse (senão, cobrindo o botão de baixo, engolia o
+ * clique) e abre para cima ou para a esquerda quando não cabe (classes up e left, postas
+ * aqui ao passar o mouse).
+ *
+ * Mapa da Expedição (pedido do usuário, 2026-10-22): fica num quadro com rolagem
+ * (div.exp-map); ao desenhar a página, o quadro rola até o nó atual (.exp-map-here) ou
+ * os próximos (.exp-map-next), e escolher um nó volta a página para o topo, onde aparece
+ * o nó escolhido.
  *
  * Divisão da tela (decisão de 2026-10-19): com uma aba de chat aberta à direita
  * (Lobby, Staff...), as abas da esquerda (páginas do servidor, teambuilder, ladder e
@@ -111,9 +124,24 @@
 		'background:#fff;color:#222;border:1px solid #999;border-radius:6px;box-shadow:0 3px 10px rgba(0,0,0,.35);' +
 		'font-size:12px;font-weight:normal;line-height:1.45;text-align:left;white-space:normal}' +
 		'.exp-tip:hover>.exp-tip-body{display:block}' +
+		'.exp-tip-body{pointer-events:none}' +
+		'.exp-tip.up>.exp-tip-body{top:auto;bottom:100%}' +
+		'.exp-tip.left>.exp-tip-body{left:auto;right:0}' +
 		// As tabelas .ladder do PS pintam todo span de cinza; dentro do tooltip, a cor normal
 		'.ladder .exp-tip,.ladder .exp-tip span{color:inherit}' +
-		'html.dark .exp-tip-body{background:#2b2b2b;color:#ddd;border-color:#666}'
+		'html.dark .exp-tip-body{background:#2b2b2b;color:#ddd;border-color:#666}' +
+		// Seletor de Pokémon do editor de expedições
+		'.exp-species-picker{position:relative}' +
+		'.exp-species-chip{display:inline-block;margin:2px 4px 2px 0;padding:1px 4px 1px 2px;border:1px solid #aaa;' +
+		'border-radius:12px;background:rgba(128,128,128,.12);white-space:nowrap}' +
+		'.exp-species-remove{border:0;background:none;cursor:pointer;font-weight:bold;padding:0 2px;color:inherit}' +
+		'.exp-species-results{position:absolute;z-index:60;left:0;max-height:260px;overflow-y:auto;min-width:240px;' +
+		'background:#fff;border:1px solid #999;border-radius:4px;box-shadow:0 3px 10px rgba(0,0,0,.3)}' +
+		'.exp-species-results:empty{display:none}' +
+		'.exp-species-option{display:block;width:100%;text-align:left;border:0;background:none;padding:2px 6px;cursor:pointer}' +
+		'.exp-species-option:hover,.exp-species-option.cur{background:#cde}' +
+		'html.dark .exp-species-results{background:#2b2b2b;border-color:#666}' +
+		'html.dark .exp-species-option:hover,html.dark .exp-species-option.cur{background:#345}'
 	).appendTo('head');
 
 	var GymTeamImportPopup = this.Popup.extend({
@@ -291,7 +319,11 @@
 		$('<span class="gym-sort-arrow"></span>').text(dir > 0 ? ' \u25B2' : ' \u25BC').appendTo(button);
 	}
 
-	/** Busca por nome numa lista de treinadores: mostra só as opções que combinam (mais "nenhum" e a escolhida). */
+	/**
+	 * Busca por nome numa lista de treinadores: mostra só as opções que combinam, mais a
+	 * escolhida e as que não são treinadores do banco (valor que não é um id: "nenhum" no
+	 * Desafio; "gerado" e "sorteado" na Expedição).
+	 */
 	function filterSelect(input) {
 		var $select = $(input).nextAll('select').first();
 		if (!$select.length) return;
@@ -305,7 +337,8 @@
 		$select.empty();
 		for (var i = 0; i < all.length; i++) {
 			var option = all[i];
-			if (text && option.value !== '' && option.value !== current && normalizeText(option.label).indexOf(text) < 0) continue;
+			var isTrainer = /^\d+$/.test(option.value);
+			if (text && isTrainer && option.value !== current && normalizeText(option.label).indexOf(text) < 0) continue;
 			$('<option></option>').val(option.value).text(option.label).appendTo($select);
 		}
 		$select.val(current);
@@ -320,6 +353,163 @@
 	// Enter num campo de busca não envia (e não salva) o formulário
 	$(document).on('keydown', '.gym-filter-text, .gym-select-filter', function (e) {
 		if (e.keyCode === 13) e.preventDefault();
+	});
+
+	// --- Tooltips da Expedição: abrem para o lado que tem espaço ---------------
+
+	$(document).on('mouseenter', '.exp-tip', function () {
+		var $tip = $(this).removeClass('up left');
+		var body = $tip.children('.exp-tip-body')[0];
+		if (!body) return;
+		// O tooltip já está visível (hover); a área visível é a da aba (que rola) dentro da janela
+		var rect = body.getBoundingClientRect();
+		var room = $tip.closest('.ps-room')[0];
+		var area = room ? room.getBoundingClientRect() : { bottom: window.innerHeight, right: window.innerWidth };
+		var bottom = Math.min(area.bottom, window.innerHeight);
+		var right = Math.min(area.right, window.innerWidth);
+		var anchor = this.getBoundingClientRect();
+		if (rect.bottom > bottom && anchor.top - rect.height > (room ? room.getBoundingClientRect().top : 0)) $tip.addClass('up');
+		if (rect.right > right) $tip.addClass('left');
+	});
+
+	// --- Mapa da Expedição: quadro com rolagem, voltar ao topo ao escolher um nó ---
+
+	var scrollTopAfterMove = false;
+	$(document).on('click', 'button[value^="/expedicao avancar "]', function () {
+		scrollTopAfterMove = true;
+	});
+
+	/** Rola o quadro do mapa até o nó atual ou os próximos; depois de escolher um nó, a página vai ao topo. */
+	function arrangeMap(map) {
+		var target = map.querySelector('.exp-map-here') || map.querySelector('.exp-map-next');
+		if (target) {
+			var top = 0;
+			for (var el = target; el && el !== map; el = el.offsetParent) top += el.offsetTop;
+			map.scrollTop = Math.max(0, top - map.clientHeight / 2);
+		}
+		if (scrollTopAfterMove) {
+			scrollTopAfterMove = false;
+			var room = $(map).closest('.ps-room')[0];
+			if (room) room.scrollTop = 0;
+		}
+	}
+
+	$(function () {
+		new MutationObserver(function (mutations) {
+			for (var i = 0; i < mutations.length; i++) {
+				for (var j = 0; j < mutations[i].addedNodes.length; j++) {
+					var node = mutations[i].addedNodes[j];
+					if (node.nodeType !== 1) continue;
+					var maps = node.classList.contains('exp-map') ? [node] : node.querySelectorAll('.exp-map');
+					for (var k = 0; k < maps.length; k++) arrangeMap(maps[k]);
+				}
+			}
+		}).observe(document.body, { childList: true, subtree: true });
+	});
+
+	// --- Editor de expedições: seletor de Pokémon com busca ---------------------
+
+	var speciesIndex = null;
+
+	/** Espécies da Pokédex do cliente que podem ser escolhidas (sem formas de batalha nem as inventadas). */
+	function speciesList() {
+		if (speciesIndex) return speciesIndex;
+		speciesIndex = [];
+		var dex = window.BattlePokedex || {};
+		for (var id in dex) {
+			var entry = dex[id];
+			if (!entry || !entry.name || entry.num <= 0 || entry.battleOnly) continue;
+			if (entry.isNonstandard && entry.isNonstandard !== 'Past') continue;
+			speciesIndex.push({ name: entry.name, key: normalizeText(entry.name) });
+		}
+		speciesIndex.sort(function (a, b) { return a.name < b.name ? -1 : 1; });
+		return speciesIndex;
+	}
+
+	function pickerValues($picker) {
+		var value = $picker.find('input[type=hidden]').val() || '';
+		return value.split(',').map(function (name) { return name.trim(); }).filter(Boolean);
+	}
+
+	function pickerMax($picker) {
+		var match = /exp-species-max-(\d+)/.exec($picker.attr('class') || '');
+		return match ? Number(match[1]) : 0;
+	}
+
+	function speciesIcon(name) {
+		var style = window.Dex && Dex.getPokemonIcon ? Dex.getPokemonIcon(name) : '';
+		return $('<span class="picon"></span>').attr('style', style);
+	}
+
+	/** Grava a lista no campo oculto e redesenha as etiquetas. */
+	function setPickerValues($picker, names) {
+		$picker.find('input[type=hidden]').val(names.join(', '));
+		var $chips = $picker.find('.exp-species-chips').empty();
+		names.forEach(function (name) {
+			var $chip = $('<span class="exp-species-chip"></span>').append(speciesIcon(name)).append(document.createTextNode(' ' + name));
+			$('<button type="button" class="exp-species-remove">\u00D7</button>').val(name).attr('title', name).appendTo($chip);
+			$chips.append($chip).append(' ');
+		});
+	}
+
+	function addSpecies($picker, name) {
+		var names = pickerValues($picker);
+		var max = pickerMax($picker);
+		if (names.indexOf(name) < 0 && (!max || names.length < max)) names.push(name);
+		setPickerValues($picker, names);
+		$picker.find('.exp-species-search').val('').focus();
+		$picker.find('.exp-species-results').empty();
+	}
+
+	function showSpeciesResults($picker) {
+		var text = normalizeText($picker.find('.exp-species-search').val()).trim();
+		var $results = $picker.find('.exp-species-results').empty();
+		if (!text) return;
+		var chosen = pickerValues($picker);
+		var starts = [];
+		var contains = [];
+		var list = speciesList();
+		for (var i = 0; i < list.length && starts.length < 15; i++) {
+			if (chosen.indexOf(list[i].name) >= 0) continue;
+			var at = list[i].key.indexOf(text);
+			if (at === 0) starts.push(list[i].name);
+			else if (at > 0 && contains.length < 15) contains.push(list[i].name);
+		}
+		starts.concat(contains).slice(0, 15).forEach(function (name, index) {
+			$('<button type="button" class="exp-species-option"></button>').toggleClass('cur', index === 0).val(name)
+				.append(speciesIcon(name)).append(document.createTextNode(' ' + name)).appendTo($results);
+		});
+	}
+
+	$(document).on('input', '.exp-species-search', function () {
+		showSpeciesResults($(this).closest('.exp-species-picker'));
+	});
+	$(document).on('keydown', '.exp-species-search', function (e) {
+		var $picker = $(this).closest('.exp-species-picker');
+		var $options = $picker.find('.exp-species-option');
+		var $cur = $options.filter('.cur');
+		if (e.keyCode === 13) {
+			// Enter escolhe a sugestão marcada (e não envia o formulário)
+			e.preventDefault();
+			if ($cur.length) addSpecies($picker, $cur.val());
+		} else if (e.keyCode === 40 || e.keyCode === 38) {
+			e.preventDefault();
+			var index = $options.index($cur) + (e.keyCode === 40 ? 1 : -1);
+			index = Math.max(0, Math.min($options.length - 1, index));
+			$options.removeClass('cur').eq(index).addClass('cur');
+		} else if (e.keyCode === 27) {
+			$picker.find('.exp-species-results').empty();
+		}
+	});
+	$(document).on('click', '.exp-species-option', function (e) {
+		e.preventDefault();
+		addSpecies($(this).closest('.exp-species-picker'), this.value);
+	});
+	$(document).on('click', '.exp-species-remove', function (e) {
+		e.preventDefault();
+		var $picker = $(this).closest('.exp-species-picker');
+		var name = this.value;
+		setPickerValues($picker, pickerValues($picker).filter(function (entry) { return entry !== name; }));
 	});
 
 	// --- Menu de formatos: nossos primeiro, oficiais agrupados ---------------
