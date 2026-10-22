@@ -42,6 +42,9 @@
  *
  * Privacidade: o teambuilder não consulta a API da Smogon (links de análises).
  *
+ * Senha: as janelas do cliente com campo de senha ganham o botão de ver a senha (a de
+ * login do PS já tem o dela).
+ *
  * Tooltips das páginas da Expedição (pedido do usuário, 2026-10-21): o servidor manda
  * o conteúdo escondido dentro do elemento (span.exp-tip > span.exp-tip-body; ver
  * server/chat-plugins/expedition/tooltips.ts), e a regra de CSS abaixo o mostra no
@@ -67,6 +70,39 @@
 	'use strict';
 
 	var SITE_NAME = 'Liga de Desafios';
+
+	// Botão de ver a senha nas janelas do cliente (pedido do usuário, 2026-10-21), como o
+	// que a janela de login do PS já tem (name=showPassword): a de trocar a senha não tinha
+	function addShowPasswordButtons(root) {
+		$(root).find('.ps-popup input[type=password]').addBack('.ps-popup input[type=password]').each(function () {
+			var $input = $(this);
+			var $popup = $input.closest('.ps-popup');
+			if ($popup.find('button[name=showPassword]').length || $input.next('.custom-showpassword').length) return;
+			var $button = $('<button type="button" class="button custom-showpassword" aria-label="Show password" ' +
+				'style="margin-left:4px;padding:2px 6px"><i class="fa fa-eye"></i></button>');
+			$button.on('click', function (e) {
+				e.preventDefault();
+				var hidden = $input.attr('type') === 'password';
+				$input.attr('type', hidden ? 'text' : 'password');
+				$button.attr('aria-label', hidden ? 'Hide password' : 'Show password');
+				$button.find('i').toggleClass('fa-eye', !hidden).toggleClass('fa-eye-slash', hidden);
+				$input.focus();
+			});
+			$input.after($button);
+		});
+	}
+	// Só com o DOM pronto (document.body pode não existir quando este arquivo carrega)
+	$(function () {
+		if (!window.MutationObserver) return;
+		new MutationObserver(function (mutations) {
+			for (var i = 0; i < mutations.length; i++) {
+				for (var j = 0; j < mutations[i].addedNodes.length; j++) {
+					var node = mutations[i].addedNodes[j];
+					if (node.nodeType === 1) addShowPasswordButtons(node);
+				}
+			}
+		}).observe(document.body, { childList: true, subtree: true });
+	});
 
 	// Tooltips das páginas da Expedição: só CSS (o conteúdo já vem na página)
 	$('<style id="expedition-tooltips"></style>').text(
